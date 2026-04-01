@@ -8,7 +8,126 @@ const deviceInfo_js_1 = require("./deviceInfo.js");
 const theme_js_1 = require("../types/theme.js");
 const hostnamePatterns_js_1 = require("../constants/hostnamePatterns.js");
 const events_js_1 = require('../types/events.js');
+const bootstrap_js_1 = require("./injection/bootstrap.js");
 const deviceInfo = (0, deviceInfo_js_1.getDeviceInfo)();
+const MOD_INTERFACE_STYLE_ID = "mod-interface-settings-style";
+const INTERFACE_MENU_SELECTORS = {
+  concerts: ['aside a[href*="/concerts"]', 'nav a[href*="/concerts"]'],
+  "non-music": ['aside a[href*="/non-music"]', 'nav a[href*="/non-music"]'],
+  kids: ['aside a[href*="/kids"]', 'nav a[href*="/kids"]'],
+};
+let interfaceSettingsApplyScheduled = false;
+let injectedLayerBootstrapScheduled = false;
+
+const queueAfterHydration = (callback) => {
+  const run = () => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(callback, 32);
+      });
+    });
+  };
+
+  if (window.document.readyState === "complete") {
+    run();
+    return;
+  }
+
+  window.addEventListener("load", run, { once: true });
+};
+
+const getInterfaceThemeSettings = () =>
+  store_js_1.get("modFeatures.interfaceTheme") ?? {};
+
+const isValidHexColor = (value) =>
+  typeof value === "string" && /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(value);
+
+const buildInterfaceSettingsCss = () => {
+  const interfaceTheme = getInterfaceThemeSettings();
+  const cssRules = [];
+
+  if (Boolean(interfaceTheme.hideExplicitMark)) {
+    cssRules.push(`
+      [class*="explicitMark"],
+      [class*="ExplicitMark"],
+      [data-test-id*="EXPLICIT"],
+      [data-test-id*="explicit"] {
+        display: none !important;
+      }
+    `);
+  }
+
+  if (
+    Boolean(interfaceTheme.customAccentEnabled) &&
+    isValidHexColor(interfaceTheme.accentColor)
+  ) {
+    cssRules.push(`
+      :root {
+        --mod-accent-color: ${interfaceTheme.accentColor};
+        --ym-controls-color-primary-default-enabled-fill: var(--mod-accent-color) !important;
+        --ym-controls-color-primary-default-hovered-fill: color-mix(in srgb, var(--mod-accent-color) 88%, white) !important;
+        --ym-controls-color-primary-default-pressed-fill: color-mix(in srgb, var(--mod-accent-color) 80%, black) !important;
+        --ym-controls-color-secondary-default-enabled-stroke: var(--mod-accent-color) !important;
+        --ym-controls-color-secondary-on_default-enabled-fill: var(--mod-accent-color) !important;
+        --ym-controls-color-secondary-on_default-hovered-fill: color-mix(in srgb, var(--mod-accent-color) 88%, white) !important;
+      }
+    `);
+  }
+
+  return cssRules.join("\n");
+};
+
+const applyInterfaceMenuVisibility = () => {
+  const interfaceTheme = getInterfaceThemeSettings();
+  const hiddenMenuItems = Array.isArray(interfaceTheme.hiddenMenuItems)
+    ? interfaceTheme.hiddenMenuItems
+    : [];
+
+  Object.entries(INTERFACE_MENU_SELECTORS).forEach(([itemKey, selectors]) => {
+    selectors.forEach((selector) => {
+      window.document.querySelectorAll(selector).forEach((node) => {
+        const target =
+          node.closest('li, [role="listitem"], [data-testid], a') ?? node;
+        if (target && target.style) {
+          target.style.display = hiddenMenuItems.includes(itemKey) ? "none" : "";
+        }
+      });
+    });
+  });
+};
+
+const applyModInterfaceSettings = () => {
+  if (!window?.document?.documentElement) return;
+
+  let styleNode = window.document.getElementById(MOD_INTERFACE_STYLE_ID);
+  if (!styleNode) {
+    styleNode = window.document.createElement("style");
+    styleNode.id = MOD_INTERFACE_STYLE_ID;
+    (window.document.head ?? window.document.documentElement).appendChild(styleNode);
+  }
+
+  styleNode.textContent = buildInterfaceSettingsCss();
+  applyInterfaceMenuVisibility();
+};
+
+const scheduleApplyModInterfaceSettings = () => {
+  if (interfaceSettingsApplyScheduled) return;
+
+  interfaceSettingsApplyScheduled = true;
+  queueAfterHydration(() => {
+    interfaceSettingsApplyScheduled = false;
+    applyModInterfaceSettings();
+  });
+};
+
+const scheduleInjectedLayerBootstrap = () => {
+  if (injectedLayerBootstrapScheduled) return;
+  injectedLayerBootstrapScheduled = true;
+  queueAfterHydration(() => {
+    injectedLayerBootstrapScheduled = false;
+    (0, bootstrap_js_1.bootstrapInjectedModLayer)(window);
+  });
+};
 
 electron_1.contextBridge.exposeInMainWorld(
   "VERSION",
@@ -159,6 +278,11 @@ electron_1.contextBridge.exposeInMainWorld("nativeSettings", {
     );
   },
 });
+electron_1.contextBridge.exposeInMainWorld(
+  "applyModInterfaceSettings",
+  scheduleApplyModInterfaceSettings,
+);
+window.applyModInterfaceSettings = scheduleApplyModInterfaceSettings;
 electron_1.contextBridge.exposeInMainWorld("openConfigFile", () =>
   electron_1.ipcRenderer.invoke("openConfigFile"),
 );
@@ -208,4 +332,16 @@ window.document.addEventListener("DOMContentLoaded", () => {
     window.document.documentElement.style.backgroundColor =
       theme === theme_js_1.Theme.Light ? "#FFFFFF" : "#000000";
   }
+
+  scheduleApplyModInterfaceSettings();
+  scheduleInjectedLayerBootstrap();
+
+  const observer = new MutationObserver(() => {
+    scheduleApplyModInterfaceSettings();
+  });
+
+  observer.observe(window.document.body, {
+    childList: true,
+    subtree: true,
+  });
 });

@@ -739,7 +739,7 @@ const setStore = (key, value) => {
 exports.set = setStore;
 
 const getProjectMergeDecision = () => {
-  return Boolean(getStore(store_js_1.StoreKeys.PROJECT_MERGE_DECISION));
+  return getStore(store_js_1.StoreKeys.PROJECT_MERGE_DECISION) ?? null;
 };
 exports.getProjectMergeDecision = getProjectMergeDecision;
 
