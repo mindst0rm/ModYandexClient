@@ -38,6 +38,13 @@ class FfmpegWrapper {
         this.ffmpegPath = this._updater.installPath;
     }
 
+    async ensureAvailable() {
+        const status = await this._updater.getInstallStatus();
+        if (!status.ok) {
+            throw new Error(status.message);
+        }
+    }
+
     async extractFromMp4(
         data,
         finalFilepath,
@@ -119,9 +126,11 @@ class FfmpegWrapper {
         this.logger.info(`ReEncoding: ${this.ffmpegPath} ${args.join(" ")}`);
 
         try {
+            await this.ensureAvailable();
             await runProcess(this.ffmpegPath, args, this.logger);
         } catch (error) {
             this.logger.error(`ffmpeg error: ${error.message}`);
+            throw error;
         }
 
         if (fileExtension === "mp3") {

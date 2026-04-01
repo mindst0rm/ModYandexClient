@@ -8,6 +8,7 @@ const axios = require("axios");
 const electron = require("electron");
 const crypto = require("crypto");
 const tar = require("tar");
+const { spawn } = require("child_process");
 const { pipeline } = require("stream/promises");
 const Logger_js_1 = require("../packages/logger/Logger.js");
 
@@ -170,6 +171,100 @@ class FfmpegUpdater {
         return actual.toLowerCase() === expected.toLowerCase();
     }
 
+    async verifyBinaryHealth() {
+        if (!(await this.fileExists(this.installPath))) {
+            return {
+                ok: false,
+                code: "missing_binary",
+                message: "Файл FFmpeg не найден",
+            };
+        }
+
+        return await new Promise((resolve) => {
+            const child = spawn(this.installPath, ["-version"], {
+                windowsHide: true,
+                stdio: ["ignore", "pipe", "pipe"],
+            });
+
+            let settled = false;
+            const finish = (result) => {
+                if (settled) return;
+                settled = true;
+                resolve(result);
+            };
+
+            const timeout = setTimeout(() => {
+                try {
+                    child.kill();
+                } catch {}
+                finish({
+                    ok: false,
+                    code: "binary_timeout",
+                    message: "FFmpeg не отвечает при запуске",
+                });
+            }, 5000);
+
+            child.on("error", (error) => {
+                clearTimeout(timeout);
+                finish({
+                    ok: false,
+                    code: "binary_spawn_failed",
+                    message: `Не удалось запустить FFmpeg: ${error?.message || error}`,
+                });
+            });
+
+            child.on("close", (code) => {
+                clearTimeout(timeout);
+                if (code === 0) {
+                    finish({
+                        ok: true,
+                        code: "ok",
+                        message: "FFmpeg готов к работе",
+                    });
+                    return;
+                }
+
+                finish({
+                    ok: false,
+                    code: "binary_exit_code",
+                    message: `FFmpeg завершился с кодом ${code}`,
+                });
+            });
+        });
+    }
+
+    async getInstallStatus() {
+        if (!(await this.fileExists(this.installPath))) {
+            return {
+                ok: false,
+                code: "missing_binary",
+                message: "FFmpeg не установлен",
+            };
+        }
+
+        if (this.requireHash) {
+            const expected = await this.fetchExpectedHash();
+            if (!expected) {
+                return {
+                    ok: false,
+                    code: "missing_hash",
+                    message: "Не удалось получить контрольную сумму FFmpeg из релиза",
+                };
+            }
+
+            const actual = await sha256File(this.installPath);
+            if (actual.toLowerCase() !== expected.toLowerCase()) {
+                return {
+                    ok: false,
+                    code: "hash_mismatch",
+                    message: "Контрольная сумма FFmpeg не совпадает",
+                };
+            }
+        }
+
+        return await this.verifyBinaryHealth();
+    }
+
     /**
      * Скачивание с прогрессом (callback) как в старом скрипте:
      * - callback(progress, progress) на чанках (0..1)
@@ -278,6 +373,12 @@ class FfmpegUpdater {
                     await this.deleteFileIfExists(this.installPath);
                     throw new Error("SHA-256 mismatch");
                 }
+            }
+
+            const finalStatus = await this.getInstallStatus();
+            if (!finalStatus.ok) {
+                await this.deleteFileIfExists(this.installPath);
+                throw new Error(finalStatus.message);
             }
 
             // ✅ Очистка кеша после успешной установки

@@ -66,6 +66,15 @@ let mainWindow = undefined;
 let isPlayerReady = false;
 let downloadQueue = Promise.resolve();
 
+const formatFfmpegErrorMessage = (errorOrStatus) => {
+    const rawMessage =
+        typeof errorOrStatus === 'string'
+            ? errorOrStatus
+            : errorOrStatus?.message ?? errorOrStatus?.code ?? 'Неизвестная ошибка';
+
+    return `FFmpeg недоступен: ${rawMessage}`;
+};
+
 const MiniPlayer = miniPlayer_js_1.getMiniPlayer();
 
 MiniPlayer.updateSettingsState(store_js_1.getModFeatures());
@@ -115,7 +124,14 @@ const handleApplicationEvents = (window) => {
         };
 
         eventsLogger.info('Event received', events_js_1.Events.DOWNLOAD_CURRENT_TRACK);
-        await trackDownloader.downloadSingleTrack(trackId, throttle(callback, PROGRESS_BAR_THROTTLE_MS));
+        try {
+            await trackDownloader.downloadSingleTrack(trackId, throttle(callback, PROGRESS_BAR_THROTTLE_MS));
+        } catch (error) {
+            eventsLogger.error('DOWNLOAD_CURRENT_TRACK failed', error);
+            sendBasicToastCreate(window, 'ffmpegRuntimeError', formatFfmpegErrorMessage(error), true);
+            sendProgressBarChange(window, 'trackDownloadCurrent', -1);
+            window.setProgressBar(-1);
+        }
     });
 
     electron_1.ipcMain.on(events_js_1.Events.PROJECT_MERGE_DECISION, async (event, decision) => {
@@ -142,8 +158,15 @@ const handleApplicationEvents = (window) => {
         };
 
         eventsLogger.info('Event received', events_js_1.Events.DOWNLOAD_TRACK);
-        await trackDownloader.downloadSingleTrack(trackId, throttle(callback, PROGRESS_BAR_THROTTLE_MS));
-        setTimeout(() => sendBasicToastDismiss(window, `trackDownload|${trackId}`), 2000);
+        try {
+            await trackDownloader.downloadSingleTrack(trackId, throttle(callback, PROGRESS_BAR_THROTTLE_MS));
+            setTimeout(() => sendBasicToastDismiss(window, `trackDownload|${trackId}`), 2000);
+        } catch (error) {
+            eventsLogger.error('DOWNLOAD_TRACK failed', error);
+            sendBasicToastCreate(window, 'ffmpegRuntimeError', formatFfmpegErrorMessage(error), true);
+            sendProgressBarChange(window, `trackDownload|${trackId}`, -1);
+            window.setProgressBar(-1);
+        }
     });
 
     electron_1.ipcMain.on(events_js_1.Events.DOWNLOAD_TRACKS, (event, trackIds, dirType = undefined, dirName = undefined) => {
@@ -193,6 +216,9 @@ const handleApplicationEvents = (window) => {
                     await trackDownloader.downloadMultipleTracks(trackIds, dirName, throttle(callback, PROGRESS_BAR_THROTTLE_MS));
                 } catch (e) {
                     eventsLogger.error('Error downloading multiple tracks:', e, e.stack);
+                    sendBasicToastCreate(window, 'ffmpegRuntimeError', formatFfmpegErrorMessage(e), true);
+                    sendProgressBarChange(window, `trackDownload|${hash}`, -1);
+                    window.setProgressBar(-1);
                 } finally {
                     setTimeout(() => {
                         sendBasicToastDismiss(window, `trackDownload|${hash}`);
@@ -298,8 +324,9 @@ const handleApplicationEvents = (window) => {
         });
 
         const ffmpegInstaller = getFfmpegUpdater();
+        const ffmpegStatus = await ffmpegInstaller.getInstallStatus();
 
-        if (!await ffmpegInstaller.isInstalled()) {
+        if (!ffmpegStatus.ok) {
 
             sendBasicToastCreate(window, 'ffmpeg', 'Обновление компонента: ffmpeg', false);
 
@@ -308,11 +335,19 @@ const handleApplicationEvents = (window) => {
                 window.setProgressBar(progressWindow);
             };
             ffmpegInstaller.ensureInstalled(throttle(callback, PROGRESS_BAR_THROTTLE_MS))
-            .then(()=>{
+            .then(async () => {
+                const finalStatus = await ffmpegInstaller.getInstallStatus();
+                if (!finalStatus.ok) {
+                    sendProgressBarChange(window, 'ffmpeg', -1);
+                    sendBasicToastCreate(window, 'ffmpegError', formatFfmpegErrorMessage(finalStatus), true);
+                    return;
+                }
+
                 sendBasicToastDismiss(window, 'ffmpeg');
             }).catch((err) => {
                 sendProgressBarChange(window, 'ffmpeg', -1);
                 eventsLogger.error(err);
+                sendBasicToastCreate(window, 'ffmpegError', formatFfmpegErrorMessage(err), true);
                 setTimeout(()=>{sendBasicToastDismiss(window, 'ffmpeg')}, 2500)
             });
 
