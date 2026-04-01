@@ -2014,12 +2014,6 @@
                         { formatMessage: l } = (0, n.A)(),
                         [isMounted, setIsMounted] = React.useState(false);
 
-                    React.useEffect(() => {
-                        setIsMounted(true);
-                    }, []);
-
-                    if (!isMounted) return null;
-
                     const onStayDecisionClick = React.useCallback(() => {
                             var e;
                             null == (e = window.desktopEvents) || e.send(_.EE.PROJECT_MERGE_DECISION, 'stay');
@@ -2030,6 +2024,12 @@
                             null == (e = window.desktopEvents) || e.send(_.EE.PROJECT_MERGE_DECISION, 'migrate');
                             o.close();
                         }, []);
+
+                    React.useEffect(() => {
+                        setIsMounted(true);
+                    }, []);
+
+                    if (!isMounted) return null;
 
                     return (0, s.jsx)(d.a, {
                         title: 'Обновления проекта',
