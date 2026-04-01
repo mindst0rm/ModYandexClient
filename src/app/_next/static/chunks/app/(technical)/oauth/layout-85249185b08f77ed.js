@@ -1757,8 +1757,15 @@
                             migrationNote: { modal: o },
                         } = (0, m.Pjs)(),
                         { formatMessage: l } = (0, i.A)(),
+                        [isMounted, setIsMounted] = React.useState(false);
 
-                        onStayDecisionClick = React.useCallback(() => {
+                    React.useEffect(() => {
+                        setIsMounted(true);
+                    }, []);
+
+                    if (!isMounted) return null;
+
+                    const onStayDecisionClick = React.useCallback(() => {
                             var e;
                             null == (e = window.desktopEvents) || e.send(m.EE.PROJECT_MERGE_DECISION, 'stay');
                             o.close();
@@ -1770,7 +1777,7 @@
                         }, []);
 
                     return (0, n.jsx)(a.a, {
-                        title: 'Важное объявление',
+                        title: 'Обновления проекта',
                         open: o.isOpened,
                         onOpenChange: o.onOpenChange,
                         closeOnOutsidePress: false,
@@ -1785,13 +1792,13 @@
                         children: (0, n.jsx)('div', {
                             className: (0, t.$)(P().scrollableContent, P().important),
                             children: [
-                                (0, n.jsx)('img', { alt: 'Баннер',
+                                (0, n.jsx)('img', { alt: 'Обновления проекта',
                                     style: {
                                         display: 'block',
                                         width: '100%',
                                         borderRadius: '10px',
                                     },
-                                    src: '/media/image_2026-02-03_00-57-28.png'
+                                    src: '/media/repo_update_banner.svg'
                                 }),
                                 (0, n.jsx)('div', {
                                     style: {
@@ -1802,24 +1809,20 @@
                                         marginTop: '20px',
                                     },
                                     children: [
-                                        (0, n.jsx)('span', { children: 'У проекта появился новый репозиторий!', style: { fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: 'white', alignSelf: 'center' } }),
-                                        (0, n.jsx)('span', { children: 'Разработка ModYandexClient продолжается, и обновления будут выходить регулярно.', style: { marginBottom: '10px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: 'Если вы не хотите ставить дополнительный софт, можете продолжать пользоваться клиентом как раньше.', style: { marginBottom: '5px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: 'Для полностью автоматического обновления при запуске можно использовать Launcher.', style: { marginBottom: '5px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: ['Launcher: ', (0, n.jsx)('a', { children: 'https://github.com/mindst0rm/yamusic-launcher', href: 'https://github.com/mindst0rm/yamusic-launcher', target:"_blank", rel:"noreferrer noopener", className: 'buOTZq_TKQOVyjMLrXvB MergeNoteModal_link' })], style: { marginBottom: '10px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: ['Репозиторий проекта: ', (0, n.jsx)('a', { children: 'https://github.com/mindst0rm/ModYandexClient', href: 'https://github.com/mindst0rm/ModYandexClient', target:"_blank", rel:"noreferrer noopener", className: 'buOTZq_TKQOVyjMLrXvB MergeNoteModal_link' })], style: { marginBottom: '10px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: 'Вы можете:', style: { fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: 'white', alignSelf: 'center' }}),
-                                        (0, n.jsx)('span', { children: 'Открыть новый репозиторий', style: { fontWeight: 'bold', fontSize: '18px', color: 'white', alignSelf: 'center' }}),
-                                        (0, n.jsx)('span', { children: 'или', style: { alignSelf: 'center' }}),
-                                        (0, n.jsx)('span', { children: 'Закрыть это сообщение', style: { fontWeight: 'bold', fontSize: '18px', color: 'white', alignSelf: 'center' }}),
-                                        (0, n.jsx)('span', { children: 'Launcher можно установить позже, если захотите полностью автоматические обновления.', style: { marginBottom: '20px' }}),
+                                        (0, n.jsx)('span', { children: 'ModYandexClient продолжает развиваться', style: { fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: 'white', alignSelf: 'center' } }),
+                                        (0, n.jsx)('span', { children: 'Основные обновления теперь выходят в новом репозитории проекта.', style: { marginBottom: '10px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: 'Если вам удобно пользоваться текущим клиентом как раньше, ничего дополнительно устанавливать не нужно.', style: { marginBottom: '8px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: 'Launcher можно установить позже, если нужен быстрый автоапдейт при запуске.', style: { marginBottom: '8px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: ['Launcher: ', (0, n.jsx)('a', { children: 'yamusic-launcher', href: 'https://github.com/mindst0rm/yamusic-launcher', target:"_blank", rel:"noreferrer noopener", className: 'buOTZq_TKQOVyjMLrXvB MergeNoteModal_link' })], style: { marginBottom: '6px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: ['GitHub: ', (0, n.jsx)('a', { children: 'mindst0rm/ModYandexClient', href: 'https://github.com/mindst0rm/ModYandexClient', target:"_blank", rel:"noreferrer noopener", className: 'buOTZq_TKQOVyjMLrXvB MergeNoteModal_link' })], style: { marginBottom: '16px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: 'Это окно можно просто закрыть и вернуться к музыке в любой момент.', style: { marginBottom: '20px', color: 'rgba(255,255,255,0.72)' }}),
                                         (0, n.jsx)('div', {
                                             style: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
                                             children: [
                                                 (0, n.jsx)('button', {
                                                     className: 'cpeagBA1_PblpJn8Xgtv iJVAJMgccD4vj4E4o068 zIMibMuH7wcqUoW7KH1B IlG7b1K0AD7E7AMx6F5p nHWc2sto1C6Gm0Dpw_l0 Y2uqxoU7xa_AZ8FUCVOW qU2apWBO1yyEK0lZ3lPO EditContentModal_button__usS1Z',
                                                     children: [
-                                                        (0, n.jsx)('span', { children: 'Продолжить без перехода',
+                                                        (0, n.jsx)('span', { children: 'Остаться здесь',
                                                             style: {
                                                                 alignSelf: 'center'
                                                             }
@@ -1834,7 +1837,7 @@
                                                 (0, n.jsx)('button', {
                                                     className: 'migrationPrimaryButton cpeagBA1_PblpJn8Xgtv _eTRQi5ADZCUvUKMZqJU zIMibMuH7wcqUoW7KH1B IlG7b1K0AD7E7AMx6F5p rWukOKAJh5Ga7JuIp62L Y2uqxoU7xa_AZ8FUCVOW qU2apWBO1yyEK0lZ3lPO EditContentModal_button__usS1Z',
                                                     children: [
-                                                        (0, n.jsx)('span', { children: 'Открыть GitHub',
+                                                        (0, n.jsx)('span', { children: 'Открыть репозиторий',
                                                             style: {
                                                                 alignSelf: 'center'
                                                             }
