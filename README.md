@@ -1,451 +1,499 @@
-# YandexMusicModClient
+# ModYandexClient
 
-> [!CAUTION]
-> ### Проект заархивирован в пользу слияния с [PulseSync](https://pulsesync.dev).
-> Несмотря на то, что репозиторий будет оставаться доступным, он больше не будет поддерживаться и обновляться. Рекомендуется перейти на PulseSync для получения новых функций и улучшений.
+> [!NOTE]
+> Это основной репозиторий продолжения разработки ModYandexClient. Обновления для мод-клиента выпускаются здесь регулярно, без обязательной установки дополнительного софта.
+> Если нужен полностью автоматический сценарий обновления при запуске, можно использовать [yamusic-launcher](https://github.com/mindst0rm/yamusic-launcher).
 
-[![TotalDownloads](https://img.shields.io/github/downloads/TheKing-OfTime/YandexMusicModClient/total?label=Загрузок)](https://github.com/TheKing-OfTime/YandexMusicModClient/releases "Download") [![OS - Windows](https://img.shields.io/badge/OS-Windows-blue)](https://github.com/TheKing-OfTime/YandexMusicModClient/releases "Download") [![OS - MacOS](https://img.shields.io/badge/OS-Mac-blue)](https://github.com/TheKing-OfTime/YandexMusicModClient/releases "Download") [![OS - MacOS](https://img.shields.io/badge/OS-Linux-blue)](https://github.com/TheKing-OfTime/YandexMusicModClient/releases "Download")
+## Зачем нужен этот README
 
-<p align="left">
-	<a href="https://discord.gg/HGNKDxwHEH">
-      <img width="113" alt="Сервер" src="https://github.com/user-attachments/assets/b7c8a272-b48c-411f-aca3-6512086a9a18">
-   </a>
-   <a href="https://github.com/TheKing-OfTime/YandexMusicModClient/">
-      <img width="96" alt="Русский" src="https://github.com/TheKing-OfTime/YandexMusicModClient/blob/master/assets/Ru_Badge_Highlighted.png">
-   </a>
-  <a href="https://github.com/TheKing-OfTime/YandexMusicModClient/blob/master/doc/en/README.md">
-      <img width="96" alt="English" src="https://github.com/TheKing-OfTime/YandexMusicModClient/blob/master/assets/En_Badge.png">
-   </a>
-</p>
+Этот файл описывает проект как репозиторий разработчика, а не как страницу для конечного пользователя. Цель: чтобы по одному `README.md` можно было понять:
 
-### Это модификация для [настольного приложения Яндекс Музыка](https://music.yandex.com/download/), главная задача которой — добавить недостающие ванильному клиенту функции.
+- что здесь является исходником;
+- как устроена локальная разработка;
+- как обновляться под новую версию Яндекс Музыки;
+- как собирать `app.asar`;
+- как делать bump версий;
+- как выкатывать GitHub release;
+- где в проекте зашиты опасные или нетривиальные допущения.
 
-> [!CAUTION]  
-> ### Данная модификация НЕ даёт возможность пользоваться сервисом БЕЗ подписки Яндекс Плюс!
+## Что это за проект
 
-## Установка
+`ModYandexClient` это модификация десктопного клиента Яндекс Музыки. Репозиторий не похож на обычный Electron-проект с чистыми исходниками: здесь в `src/` лежит уже подготовленный снапшот приложения Яндекс Музыки с модификациями, а поверх него есть набор инструментов для:
 
-0. Загрузите последнюю версию клиента Яндекс музыки с официального сайта https://music.yandex.com/download/.
-1. Скачайте и установите Патчер из репозитория https://github.com/TheKing-OfTime/YandexMusicModPatcher следуя его порядку установки.
-2. Нажмите в нём кнопку Patch.
-3. Дождитесь окончания установки.
-4. Готово!
+- извлечения свежего `app.asar` из установленного клиента;
+- патчинга extracted-сборки;
+- пересборки `app.asar`;
+- прямой подмены `app.asar` в установленном приложении;
+- публикации мод-обновления как GitHub release;
+- анализа изменений между версиями Яндекс Музыки.
 
-Если из функций модификации вам нужны только разблокированные DevTools,
-то в настройках патчера выберите **Канал релизов** "Только Девтулзы".
+Главный рабочий entrypoint для сборки и релиза: `node toolset.js ...`
 
-Преимущество в том, что эта версия собирается полностью автоматически и всегда использует последнюю версию ЯМ (Не спуфится как полная модификация).
+`electron-builder` здесь не является основным поддерживаемым путём. В `src/package.json` есть `package:*` скрипты, но они ссылаются на отсутствующий `builder.config.cjs`, поэтому реальный рабочий сценарий в этом репозитории идёт через [`toolset.js`](./toolset.js).
 
+## Карта репозитория
 
-## Возможности
+### Ключевые директории
 
-### Discord Статус
-<details>
-   <summary>Подробнее</summary>
+- `src/` — основной снапшот модифицированного клиента. Это главный источник для сборки `app.asar`.
+- `src/app/` — фронтенд-бандл Яндекс Музыки.
+- `src/main/` — main process, модификации, апдейтеры, FFmpeg, Discord RPC и т. д.
+- `miniplayer/` — отдельный React/Vite-проект миниплеера. Результат сборки попадает в `src/main/lib/miniplayer/renderer/`.
+- `native/` — исходники нативных модулей. Сейчас основной модуль: `setIconicThumbnail`.
+- `dataminer/` — утилиты для анализа extracted-версий и расчёта diff между обновлениями Яндекс Музыки.
+- `.github/workflows/` — автоматизация вокруг FFmpeg и post-release ассетов.
+- `PATCHNOTES.md` — текст релиз-нотов для ближайшего релиза мода.
+- `toolset.js` — вся оркестрация extract/build/spoof/release.
 
-Добавляет поддержку отображения текущего трека как статуса в Discord.
-![image](https://github.com/user-attachments/assets/ff3b0726-6f83-4849-bce6-c5eb31523efa)
+### Генерируемые директории
 
-</details>
+- `builds/latest/` — обычная локальная сборка `app.asar`.
+- `builds/patched/` — patched/devtools-сборки.
+- `extracted/` — распакованные версии оригинального клиента.
+- `minified/` — временная директория при сборке с минификацией.
+- `temp/` — временные файлы, хэши, загрузки и служебные артефакты.
+- `src/main/native_modules/` — результаты сборки нативных модулей.
+- `src/main/lib/miniplayer/renderer/` — артефакты сборки миниплеера.
 
-### Управление плеером с других устройств
-<details>
-   <summary>Подробнее</summary>
+## Как здесь устроен source of truth
 
-Добавляет поддержку управления воспроизведением настольного клиента с других устройств.
-<div>
-	<img width="250" alt="Список устройств для воспроизведения" src="https://github.com/user-attachments/assets/17196b75-85c4-42f0-af81-ab62123fde5c">
-	<img width="250" alt="Управление воспроизведение с телефона на ПК клиенте" src="https://github.com/user-attachments/assets/305a94f9-4908-4c47-9d75-c0838dbad805">
-</div>
-<div>
-	<img width="504" alt="DiscordCanary_q3lSyzS2R9" src="https://github.com/user-attachments/assets/ebd7a0c0-db68-4c26-b0f9-481e1ea9e57b" />
-	<br/>
-	<img width="504" alt="Яндекс_Музыка_1AZwtDf0Tz" src="https://github.com/user-attachments/assets/ec3cba2f-9b58-4a07-bc60-1920fc94b759" />
-</div>
+У проекта есть три разных уровня "истины":
 
-<details>
-   <summary>Настройки</summary>
+1. Установленный официальный клиент Яндекс Музыки.
+   Из него извлекается актуальный upstream `app.asar`.
 
-Можно выключить в настройках внутри приложения:
+2. `extracted/<версия>` и `extracted/<версия>@pure`.
+   Это рабочая зона для анализа обновлений. `@pure` хранит чистую распаковку, без патчей; каталог без суффикса может быть пропатчен.
 
-![image](https://github.com/user-attachments/assets/8b7280d6-f2ef-4a0e-8835-32e173a1e843)
+3. `src/`.
+   Это итоговый поддерживаемый снапшот мода, из которого делается релизный `app.asar`.
 
-</details>
+Если задача не про разбор нового апдейта Яндекс Музыки, почти всегда нужно редактировать именно `src/`, а не `extracted/`.
 
-</details>
+## Версии: что именно bump-ать
 
-### Скробблинг Last.FM
-<details>
-   <summary>Подробнее</summary>
+Главная ловушка репозитория — здесь есть несколько разных версий, и они отвечают за разное.
 
-Добавляет поддержку скробблинга в Last.FM. Трек заскробблится, если вы прослушаете хотя бы его половину (но при этом запрос скроббла отправиться при смене трека).
+### `src/package.json -> version`
 
-<img width="550" alt="Страница пользователя Last.FM с заскроббленными треками" src="https://github.com/user-attachments/assets/9a47a37b-b895-4a06-8538-fb94eb009290">
+Это версия самого клиента Яндекс Музыки, под которую замаскирован мод. По истории коммитов именно это поле меняется в коммитах вида:
 
-<details>
-   <summary>Настройки</summary>
+- `chore: Spoof version from 5.84.1 to 5.85.0`
 
-Авторизоваться в Last.FM, а также включить/выключить функцию можно в соответствующем меню в настройках приложения:
+Обычно это поле синхронизируется с extracted-версией через `toolset.js spoof`.
 
-![image](https://github.com/user-attachments/assets/0fbd13ed-7837-49c2-9b28-5bc210480002)
+### `src/package.json -> buildInfo.VERSION`
 
-<details>
-   <summary>Процесс авторизации</summary>
+Это дублирование версии клиента Яндекс Музыки. После spoof-а это поле тоже должно совпадать с `version`.
 
-https://github.com/user-attachments/assets/079f8b38-ca6b-4fef-b6a2-efa853fd583f
+### `src/package.json -> modification.version`
 
-</details>
+Это настоящая версия мода. Именно она:
 
-</details>
+- показывается мод-апдейтеру;
+- используется как `release.name` на GitHub;
+- становится частью релизного тега `onlyDiscordRPC@<modVersion>`.
 
-</details>
+Когда вы делаете новый релиз мода, bump-ать нужно в первую очередь это поле.
 
-### Мини-плеер
-<details>
-   <summary>Подробнее</summary>
+### `PATCHNOTES.md`
 
-Добавляет миниплеер. Отдельное окно которое отображает текущий трек и даёт возможность удобно управлять воспроизведением.
+Это релиз-ноты следующего релиза мода. Коммиты `chore: Prepare to release` в истории почти всегда меняют:
 
-Поддерживает широкий спектр размеров окна и плавно адапитируется к ним. Кроме того может быть закреплен поверх окон.
+- `PATCHNOTES.md`
+- `src/package.json -> modification.version`
 
-<p align="left">
-	<img height="200" alt="Кнопка открытия миниплеера" src="https://github.com/user-attachments/assets/f8f6ae6b-8502-4935-82cb-0b4d610d41ec" />
-	<img height="200" alt="image" src="https://github.com/user-attachments/assets/ac2b86e6-c68e-41a0-aa59-758908ca2f14" />
-	<img height="400" alt="image" src="https://github.com/user-attachments/assets/58deb47c-d0e0-4c78-9e40-f0ab086dfd87" />
-	<img height="400" alt="image" src="https://github.com/user-attachments/assets/d0063404-baf1-4827-8d25-399f8a5e5fa9" />
-</p>
+## Требования к окружению
 
-</details>
+### Базовые
 
-### Настраиваемая папка кеша
-<details>
-   <summary>Подробнее</summary>
+- Node.js для запуска `toolset.js` и вспомогательных скриптов.
+- `npm install` в корне репозитория.
+- установленный десктопный клиент Яндекс Музыки.
 
-В ванильной версии весь кеш (в том числе скачанные вами треки для офлайн-прослушивания) хранится по пути `%appdata%/YandexMusic/`.
+### Для Windows
 
-Данная функция позволяет использовать для кеша другой путь, например, чтобы 10 гигабайт скаченной вами музыки не тратили место на системном диске.
+- Visual Studio Build Tools / C++ toolchain для `node-gyp`, если нужна пересборка нативного модуля;
+- 7-Zip для ручной распаковки инсталляторов и для GitHub Actions-воркфлоу `buildDevToolsOnly`.
 
-![image](https://github.com/user-attachments/assets/f48a8d32-d03f-4770-8204-460f37ab059f)
+### Для macOS
 
-</details>
+- для прямой замены `app.asar` через `build -d` нужен отключённый SIP для файловой системы, потому что `toolset.js` переписывает `Info.plist` и переподписывает приложение.
 
-### Глобальные хоткеи
-<details>
-   <summary>Подробнее</summary>
+## Установка зависимостей
 
-Добавляет поддержку глобальных хоткеев.
+### 1. Корневые зависимости
 
-<details>
-   <summary>Настройки</summary>
-	
-```json
-{
-  "globalShortcuts": {
-    "TOGGLE_PLAY": "Ctrl+/",
-    "MOVE_FORWARD": "Ctrl+,",
-    "MOVE_BACKWARD": "Ctrl+.",
-    "TOGGLE_SHUFFLE": "Ctrl+'",
-    "REPEAT_NONE": "",
-    "REPEAT_CONTEXT": "",
-    "TOGGLE_LIKE": "",
-    "TOGGLE_DISLIKE": ""
-  }
-}
-```
-
-</details>
-
-</details>
-
-### Улучшение превью панели задач
-<details>
-   <summary>Подробнее</summary>
-
-Добавляет поддержку расширений панели задач (Taskbar Extensions).
-
-![browser_Y2f5KiyCYN](https://github.com/user-attachments/assets/877f5c77-f196-4702-bd44-7da60e1a0d93)
-
-</details>
-
-### Повтор трека в Моей Волне
-<details>
-   <summary>Подробнее</summary>
-
-Добавляет возможность включить повтор трека когда играет **Моя Волна**.
-
-<p align="left">
-	<img width="550" src="https://github.com/user-attachments/assets/85480090-5e19-4ee8-8084-dbb15491451b" alt="Повтор трека в Моей Волне — интерфейс" />
-</p>
-
-</details>
-
-### Отображение качества трека
-<details>
-   <summary>Подробнее</summary>
-
-Отображает качество либо кодек текущего трека.
-
-![image](https://github.com/user-attachments/assets/424434fb-5e66-4a85-8ca2-90179cb7f357)
-
-</details>
-
-### Улучшенная анимация Моей Волны
-<details>
-   <summary>Подробнее</summary>
-
-Улучшает поведение анимации **Моей Волны**. Она начинает лучше адаптироваться к музыке. Также позволяет настраивать частоту кадров в секунду при рендеринге анимации.
-
-_До:_
-
-https://github.com/user-attachments/assets/23a8da4d-3d6a-43c6-a5f5-965e065ed912
-
-_После:_
-
-https://github.com/user-attachments/assets/b062a3ee-d05e-4cf3-8e03-b6f8bf66525c
-
-</details>
-
-### Поиск при добавлении трека в плейлист
-<details>
-   <summary>Подробнее</summary>
-
-Добавляет строку поиска в контекстное меню выбора плейлиста.
-
-<p align="left">
-	<img width="500" alt="Пример настроек внутри приложения" src="https://github.com/user-attachments/assets/03924f52-6e37-4d6a-ad9e-c079ec739cd8" />
-</p>
-
-</details>
-
-### Информация о скачанных треках
-<details>
-   <summary>Подробнее</summary>
-
-Добавляет информацию о скачанных треках на страницу настроек (количество скачанных треков и используемое хранилище для скачанных треков).
-
-![image](https://github.com/user-attachments/assets/d3ba9ada-941c-4bd2-8c53-dad54090bf4e)
-
-</details>
-
-### Скачивание треков в файл
-<details>
-   <summary>Подробнее</summary>
-
-Позволяет скачать любой трек, альбом, плейлист, подкаст, аудиокнигу вам на ПК.
-
-![image](https://github.com/user-attachments/assets/95a52251-401a-4071-9ee3-914b8c7b7c8f)
-
-<img width="838" height="564" alt="image" src="https://github.com/user-attachments/assets/fa31d613-7d9f-4d6c-840e-b41c561f389f" />
-
-<img width="1266" height="105" alt="image" src="https://github.com/user-attachments/assets/b69ab3c6-7805-4a31-b703-5f48688f5284" />
-
-<img width="557" height="317" alt="image" src="https://github.com/user-attachments/assets/1402cdf1-ebe0-4168-9013-f900a3702951" />
-
-</details>
-
-### Произвольный масштаб приложения
-<details>
-   <summary>Подробнее</summary>
-
-Вы можете менять масштаб приложения сочетанием клавиш `Ctrl+=` и `Ctrl+-`.
-
-_Диапазон масштабов: 75% - 200%._
-
-Сбросить масштаб до 100% можно с помощью `Ctrl+0`.
- 
-</details>
-
-### Исправления багов ванильного клиента
-<details>
-   <summary>Подробнее</summary>
-
-В ванильном клиенте есть набор багов, которые довольно сильно ухудшают опыт использования. Некоторые из них исправлены в моде. Например:
-
-- Клиент больше не теряет чёткость, если занимает нечётное количество пикселей по высоте или ширине.
-- Клиент больше не теряет медиаконтекст (ака медиаклавиши), когда включён кроссфейд.
-- Воспроизведение AAC треков не застревает, если перемотать ровно на 1:00. 
-- Модальные окна в настройках имеют одинаковый бекдроп. Кроме того он появляется плавно.
-- Исправлен css темы для компонента слайдеров.
-- Кнопки на панели плеера лучше адаптируются к размеру окна приложения. Кроме того делается это плавно.
-- В рамках улучшения анимации **Моей Волны** обновлены неверные параметры анализатора (если точнее правильно настроены fftSize и smoothingTimeConstant).
-- Исправлена проблема из-за которой не за весь тайтл бар можно было перемещать окно приложения по экрану.
- 
-</details>
-
-### Эксперименты
-<details>
-   <summary>Подробнее</summary>
-
-Позволяет включать/выключать эксперименты. Для этого вам нужно включить **Режим разработчика**.
-
-![image](https://github.com/user-attachments/assets/b341e6cb-58e3-4dfa-b8b3-e6ece72539a5)
-
-</details>
-
-### Devtools & Панель Разработчика
-<details>
-   <summary>Подробнее</summary>
-
-![electron_L6SeZLnSAH](https://github.com/TheKing-OfTime/YandexMusicModClient/assets/68960526/ae841087-d910-45e5-a007-3fd869a493e1)
-
-![electron_y6aOeckPLH](https://github.com/TheKing-OfTime/YandexMusicModClient/assets/68960526/4bde4785-9196-4ac6-ad3b-9ac5db5b61c8)
-
-</details>
-
-
-## Настройки
-Настройки можно найти в `%appdata%\YandexMusic\config.json`.
-
-Настройки внутри приложения:
-<p align="left">
-	<img width="500" alt="Пример настроек внутри приложения" src="https://github.com/user-attachments/assets/c8c96514-4eaa-43eb-8d85-3290e721f5d1" />
-</p>
-
-
-## Сборка проекта из исходников
-
-0. Убедитесь что **Яндекс Музыка** и **node.js** уже установлены.
-1. Склонируйте проект:
-```cmd
-git clone https://github.com/TheKing-OfTime/YandexMusicModClient.git
-```
-2. Установите зависимости:
-```cmd
+```powershell
 npm install
 ```
-Учтите, что зависимости вам нужно устанавливать в корневой папке проекта, а не в `/src/`.
 
-Для удобства сборки в проекте есть cli скрипт `toolset.js`, он позволяет быстро и просто распаковать, упаковать, опубликовать, спуфнуть, или пропатчить код.
+Это ставит зависимости только для инструментария репозитория. В корневом `package.json` нет `scripts`; запуск идёт напрямую через `node toolset.js`.
 
-3. Собрать проект:
-```cmd
+### 2. Зависимости миниплеера
+
+Обычно вручную не нужны. При сборке `toolset.js` сам запускает:
+
+```powershell
+cd miniplayer
+npm install
+npm run build
+```
+
+### 3. Зависимости нативного модуля
+
+Тоже обычно руками не нужны. При сборке `toolset.js` сам заходит в `native/<module>` и запускает `npm run build`.
+
+## Быстрые команды
+
+### Официальные bat-обёртки
+
+- `build.bat` -> `node toolset.js build`
+- `buildAndRelease.bat` -> `node toolset.js build -r`
+- `buildDirectly.bat` -> `node toolset.js build -d -m`
+- `buildDirectlyNoMinify.bat` -> `node toolset.js build -d`
+- `onUpdate.bat` -> extract/patch/direct-build + dataminer + diffCalculator
+
+### Основные команды `toolset.js`
+
+```powershell
+node toolset.js help
+node toolset.js extract
+node toolset.js extract -p
+node toolset.js build
+node toolset.js build -m
+node toolset.js build -d -m
+node toolset.js spoof
+node toolset.js release
+```
+
+### Что делают ключевые флаги
+
+- `-m` — включает минификацию.
+- `-d` — собирает напрямую в установленный клиент.
+- `-p` — патчит extracted-сборку.
+- `-r` — делает GitHub release.
+- `-b` — после `spoof` ещё и собирает.
+- `-f` — форсирует перезапись/переизвлечение.
+- `--noNativeModules` — пропускает сборку нативных модулей.
+- `--lastExtracted` — использует последнюю extracted-сборку как source.
+- `--extractType=customAsar` — извлечение из произвольного `app.asar`.
+- `--oldYMHashOverride=<hash>` — ручная подмена старого asar hash для Windows direct-build.
+
+## Обычный workflow разработки
+
+### Если вы меняете только код мода
+
+1. Работайте в `src/`.
+2. При необходимости меняйте `miniplayer/` и дайте `toolset.js` его пересобрать.
+3. Соберите локальный `app.asar`:
+
+```powershell
+node toolset.js build
+```
+
+4. Если хотите сразу проверить в установленной Яндекс Музыке:
+
+```powershell
 node toolset.js build -d -m
 ```
-Эта команда автоматически оптимизирует код (минифицирует его), а после запакует его по пути **Яндекс Музыки** по умолчанию `%localappdata%/Programs/YandexMusic/resources/app.asar`.
 
-4. Для быстрой сборки проекта при разработке можете использовать команду:
-```cmd
-node toolset.js rebuild
+### Если вышло новое обновление Яндекс Музыки
+
+1. Обновите установленный официальный клиент.
+2. Извлеките новый `app.asar`:
+
+```powershell
+node toolset.js extract
 ```
-Не обязательные долгие этапы будут пропущены.
 
+3. Если нужен пропатченный extracted-вариант для сравнения/локальной проверки:
 
-## Поддержка
-Если вам действительно понравился новый опыт использования **Яндекс Музыки** с этой модификацией, вы можете поддержать мою работу над ней:
-<p align="left">
-   <a href="https://boosty.to/thekingoftime/donate">
-      <img width="250" alt="Поддержите меня на бусти" src="https://github.com/user-attachments/assets/7b341f16-6513-4138-a3c5-b5892b062f63">
-   </a>
-</p>
+```powershell
+node toolset.js extract -p
+```
 
-## Спонсоры
-Большое спасибо спонсорам, которые позволяют мне активно работать над этим проектом:
-<p align="left">
-   <a href="https://github.com/rufus20145">
-      <img width="50" alt="rufus20145" src="https://avatars.githubusercontent.com/u/35730338?v=4">
-   </a>
-   <a href="https://github.com/Nulliik">
-      <img width="50" alt="Nulliik" src="https://avatars.githubusercontent.com/u/37436671?v=4">
-   </a>
-   <a href="https://github.com/dmitrybabich">
-      <img width="50" alt="dmitrybabich" src="https://avatars.githubusercontent.com/u/6319078?v=4">
-   </a>
-   <a href="https://www.last.fm/ru/user/am0rall">
-      <img width="50" alt="am0rall" src="https://lastfm.freetls.fastly.net/i/u/avatar170s/a983db6495ea41c8c16777aa0679632d.png">
-   </a>
-   <a href="https://github.com/ajioe1111">
-      <img width="50" alt="ajioe1111" src="https://avatars.githubusercontent.com/u/39803571?v=4">
-   </a>
-   <a href="https://github.com/xab4er">
-      <img width="50" alt="xab4er" src="https://avatars.githubusercontent.com/u/60750449?v=4">
-   </a>
-   <a href="https://github.com/Crosbic">
-      <img width="50" alt="Crosbic" src="https://avatars.githubusercontent.com/u/71810318?v=4">
-   </a>
-   <a href="https://github.com/foreA-adoxid">
-      <img width="50" alt="foreA-adoxid" src="https://avatars.githubusercontent.com/u/72875762?v=4">
-   </a>
-   <a href="https://github.com/Maks1mio">
-      <img width="50" alt="Maks1mio" src="https://avatars.githubusercontent.com/u/44835662?v=4">
-   </a>
-   <a href="https://github.com/FaSSteR">
-      <img width="50" alt="FaSSteR" src="https://avatars.githubusercontent.com/u/50427367?v=4">
-   </a>
-   <a href="https://github.com/Dott-rus">
-      <img width="50" alt="Dott-rus" src="https://avatars.githubusercontent.com/u/78660260?v=4">
-   </a>
-   <a href="https://github.com/Lemon4ksan">
-      <img width="50" alt="Lemon4ksan" src="https://avatars.githubusercontent.com/u/122788290?v=4">
-   </a>
-   <a href="https://github.com/SergheyUmca">
-      <img width="50" alt="SergheyUmca" src="https://avatars.githubusercontent.com/u/33039150?v=4">
-   </a>
-   <a href="https://github.com/schwarzalexey">
-      <img width="50" alt="schwarzalexey" src="https://avatars.githubusercontent.com/u/97682066?v=4">
-   </a>
-   <a href="https://github.com/dudoska">
-      <img width="50" alt="dudoska" src="https://avatars.githubusercontent.com/u/94677394?v=4">
-   </a>
-   <a href="https://diramix.github.io/html-profile/">
-      <img width="50" alt="Diramix" src="https://avatars.githubusercontent.com/u/79011730?v=4">
-   </a>
-   <a href="https://github.com/trigger-off">
-      <img width="50" alt="trigger-off" src="https://avatars.githubusercontent.com/u/71810229?v=4">
-   </a>
-   <a href="https://github.com/Baduga">
-      <img width="50" alt="Baduga" src="https://avatars.githubusercontent.com/u/69755854?v=4">
-   </a>
-   <a href="https://github.com/LazyMind">
-      <img width="50" alt="LazyMind" src="https://avatars.githubusercontent.com/u/87148057?v=4">
-   </a>
-   <a href="https://github.com/Schelchki">
-      <img width="50" alt="Schelchki" src="https://avatars.githubusercontent.com/u/162707132?v=4">
-   </a>
-   <a href="https://github.com/entaneey">
-      <img width="50" alt="entaneey" src="https://avatars.githubusercontent.com/u/195827686?v=4">
-   </a>
-   <a href="https://github.com/saqura1337">
-      <img width="50" alt="saqura1337" src="https://avatars.githubusercontent.com/u/68153864?v=4">
-   </a>
-   <a href="https://github.com/alex2810com">
-      <img width="50" alt="alex2810com" src="https://avatars.githubusercontent.com/u/187911293?v=4">
-   </a>
-   <a href="https://github.com/ellatuk">
-      <img width="50" alt="ellatuk" src="https://avatars.githubusercontent.com/u/87390648?v=4">
-   </a>
-   <a href="https://github.com/LockMean">
-      <img width="50" alt="LockMea" src="https://avatars.githubusercontent.com/u/214841821?v=4">
-   </a>
-   <a href="https://github.com/Dimas-VM">
-      <img width="50" alt="LockMea" src="https://avatars.githubusercontent.com/u/179121916?v=4">
-   </a>
-   <a href="https://github.com/Danila0986">
-      <img width="50" alt="Danila0986" src="https://avatars.githubusercontent.com/u/157834445?v=4">
-   </a>
-   <a href="https://github.com/Cheafiss">
-      <img width="50" alt="Cheafiss" src="https://avatars.githubusercontent.com/u/125489408?v=4">
-   </a>
-   <a href="https://github.com/raxemus">
-      <img width="50" alt="raxemus" src="https://avatars.githubusercontent.com/u/6419721?v=4">
-   </a>
-   <a href="https://github.com/Ryto0">
-      <img width="50" alt="Ryto0" src="https://avatars.githubusercontent.com/u/113520566?v=4">
-   </a>
-   <a href="https://github.com/Rubikoid">
-      <img width="50" alt="Rubikoid" src="https://avatars.githubusercontent.com/u/5082689?v=4">
-   </a>
-   <a href="https://github.com/NeoDaniil">
-      <img width="50" alt="NeoDaniil" src="https://avatars.githubusercontent.com/u/242981313?v=4">
-   </a>
-   <a href="https://github.com/ethermawe">
-      <img width="50" alt="ethermawe" src="https://avatars.githubusercontent.com/u/173939481?v=4">
-   </a>
-   <a href="https://github.com/mfoxru">
-      <img width="50" alt="mfoxru" src="https://avatars.githubusercontent.com/u/5925970?v=4">
-   </a>
-   <a href="https://github.com/aleks-fill">
-      <img width="50" alt="aleks-fill" src="https://avatars.githubusercontent.com/u/3996988?v=4">
-   </a>
-</p>
+4. Для полного legacy-пайплайна "после апдейта" есть:
 
-> Список обновляется вручную.
+```powershell
+onUpdate.bat
+```
+
+Этот батник делает:
+
+- `extract -pd`
+- `dataminer/dataminer.js`
+- `dataminer/diffCalculator.js diff -s`
+
+Важно: `extract -pd` не только патчит extracted-сборку, но и сразу direct-build-ит её обратно в установленный клиент.
+
+5. После extraction синхронизируйте версию клиента в `src/package.json`:
+
+```powershell
+node toolset.js spoof
+```
+
+6. Перенесите нужные изменения из новой extracted-версии в `src/`.
+
+## Как работает сборка
+
+В `toolset.js` сборка делает следующее:
+
+1. Пересобирает миниплеер, если изменился `miniplayer/`.
+2. Пересобирает нативные модули, если изменился `native/`.
+3. Опционально минифицирует `src/` во временный `minified/src`.
+4. Упаковывает всё в `app.asar`.
+5. Оставляет рядом `app.asar.unpacked` для модулей `sharp` и `@img`.
+
+Именно поэтому релиз состоит не только из `app.asar`, но и из `app.asar.unpacked.zip`.
+
+## Direct build и замена `app.asar` в установленном клиенте
+
+Команда:
+
+```powershell
+node toolset.js build -d -m
+```
+
+делает следующее:
+
+1. Находит установленный клиент:
+   Windows: `%LOCALAPPDATA%\Programs\YandexMusic\resources\app.asar`
+   macOS: `/Applications/Яндекс Музыка.app/Contents/Resources/app.asar`
+
+2. Закрывает Яндекс Музыку.
+3. Собирает новый `app.asar` прямо поверх установленного.
+4. Выполняет bypass asar integrity.
+5. При необходимости открывает приложение обратно.
+
+### Важные caveats
+
+- На Windows bypass делается заменой старого SHA-256 хэша заголовка `app.asar` прямо внутри `Яндекс Музыка.exe`.
+- На macOS bypass требует редактирования `Info.plist` и переподписи приложения.
+- Если Windows direct-build не находит старый hash автоматически, используйте `--oldYMHashOverride=<hash>`.
+
+## Как делать bump версии `app.asar`
+
+Если под "bump версии основного `asar`" имеется в виду переход на новую версию клиента Яндекс Музыки, правильная последовательность такая:
+
+1. Обновить официальный клиент Яндекс Музыки.
+2. Запустить:
+
+```powershell
+node toolset.js extract
+```
+
+3. Проверить, что появилась новая папка `extracted/<ymVersion>@pure`.
+4. Запустить:
+
+```powershell
+node toolset.js spoof
+```
+
+5. Убедиться, что в `src/package.json` обновились:
+   - `version`
+   - `buildInfo.VERSION`
+
+6. После этого уже переносить модификации и собирать новый `app.asar`.
+
+Если нужно выпустить новую версию мода без смены upstream-версии Яндекс Музыки, bump-айте только:
+
+- `src/package.json -> modification.version`
+- `PATCHNOTES.md`
+
+## Как делать релиз мода
+
+### Локальная ручная схема
+
+1. Убедитесь, что `src/` в нужном состоянии.
+2. Проверьте `src/package.json`:
+   - `version` и `buildInfo.VERSION` соответствуют целевой версии Яндекс Музыки;
+   - `modification.version` увеличен.
+3. Обновите `PATCHNOTES.md`.
+4. Соберите релизный `app.asar`:
+
+```powershell
+node toolset.js build
+```
+
+5. Создайте релиз:
+
+```powershell
+node toolset.js release
+```
+
+Или одной командой:
+
+```powershell
+node toolset.js build -r
+```
+
+### Что делает `release`
+
+`toolset.js release`:
+
+- берёт `modification.version` как версию релиза;
+- берёт текущую upstream YM-версию из установленного клиента;
+- создаёт тег `onlyDiscordRPC@<modVersion>`;
+- создаёт draft release;
+- загружает `app.asar`;
+- загружает `app.asar.unpacked.zip`;
+- публикует release;
+- отправляет patch notes в Discord webhook.
+
+### Что нужно в `.env`
+
+Смотрите `.env.example`:
+
+```dotenv
+GITHUB_TOKEN=
+DISCORD_WEBHOOK_URL=
+DISCORD_DATAMINER_WEBHOOK_URL=
+```
+
+Минимально для локального релиза нужны:
+
+- `GITHUB_TOKEN`
+- `DISCORD_WEBHOOK_URL`
+
+### Важно про GitHub токен
+
+`toolset.js` использует `Octokit` и ждёт, что токен сможет:
+
+- создавать теги;
+- создавать release;
+- загружать release assets.
+
+На GitHub Actions дополнительно используется отдельный секрет `PAT_TOKEN` в workflow-файлах.
+
+## Как устроен post-release pipeline на GitHub
+
+После публикации релиза срабатывают дополнительные workflow:
+
+### `compressAsset.yml`
+
+После `release.published` он:
+
+- скачивает `app.asar` из latest release;
+- создаёт `app.asar.gz`;
+- создаёт `app.asar.zst`;
+- дозаливает их в тот же релиз.
+
+Это важно, потому что мод-апдейтер в рантайме предпочитает сначала `app.asar.zst`, потом `app.asar.gz`, и только потом обычный `app.asar`.
+
+### `buildDevToolsOnly.yml`
+
+После `release.published` он:
+
+- скачивает последний официальный Windows installer Яндекс Музыки;
+- извлекает оттуда `app.asar`;
+- патчит только devtools/devpanel сценарий;
+- публикует `appDevTools.asar` и `appDevTools.asar.gz`.
+
+Это отдельный облегчённый релизный канал для пользователей, которым нужны только DevTools.
+
+### `ffmpeg.yml`
+
+Это ручной workflow для публикации FFmpeg-бинарников под тегом `ffmpeg-binaries`.
+
+Он нужен потому, что рантайм-код скачивает FFmpeg из GitHub release, а не из самого репозитория:
+
+- репозиторий задаётся в `src/main/index.js`;
+- бинарники сверяются по `.sha256`.
+
+## Как работают обновления в рантайме
+
+У проекта два независимых канала обновления:
+
+### 1. Официальные обновления Яндекс Музыки
+
+Они идут через `electron-updater` и конфиг из `src/package.json -> common.UPDATE_URL`.
+
+### 2. Обновления самого мода
+
+Они идут через GitHub latest release:
+
+- `src/main/lib/modUpdater.js` проверяет `https://api.github.com/repos/mindst0rm/ModYandexClient/releases/latest`
+- в качестве версии сравнивается `src/package.json -> modification.version`
+- ассеты выбираются в приоритете:
+  - `app.asar.zst`
+  - `app.asar.gz`
+  - `app.asar`
+
+Установка мода делается через внешний патчер по протоколу `ymmp://patch/from-mod/...`
+
+## Очень важные legacy-ограничения
+
+### Репозиторий релизов зашит жёстко
+
+Несколько мест в проекте жёстко завязаны на конкретный GitHub-репозиторий, и сейчас это `mindst0rm/ModYandexClient`:
+
+- `toolset.js`
+- `src/main/lib/modUpdater.js`
+- `src/main/index.js`
+- `src/main/lib/discordRichPresence.js`
+- GitHub Actions, использующие release assets
+
+Если вы работаете во fork-репозитории и хотите выпускать релизы именно туда, эти места нужно переопределить вручную.
+
+### `spoof -r` опаснее, чем кажется
+
+Команда `node toolset.js spoof -r` не просто меняет локальный `src/package.json`. Она может:
+
+- смотреть latest release в захардкоженном GitHub repo;
+- автоматически увеличить `modification.version`;
+- создать коммит через GitHub API;
+- форсированно обновить `heads/master` в удалённом репозитории.
+
+Это legacy-автоматизация под конкретный репозиторий. На другом форке использовать её без адаптации нельзя.
+
+### `src/` это не "чистый исходник"
+
+- здесь много уже собранного кода;
+- `src/node_modules` закоммичены;
+- редактирование часто происходит прямо в compiled JS/HTML;
+- `npm install` внутри `src/` не является стандартной частью workflow и может породить лишний шум в diff.
+
+## Рекомендуемый релизный чеклист
+
+1. Проверить `git diff`.
+2. Проверить `src/package.json`.
+3. Проверить `PATCHNOTES.md`.
+4. При обновлении upstream-версии сделать `extract` и `spoof`.
+5. Собрать `node toolset.js build`.
+6. По возможности проверить direct-build локально.
+7. Убедиться, что рядом с `builds/latest/app.asar` есть `app.asar.unpacked`.
+8. Сделать `node toolset.js release`.
+9. Проверить опубликованный GitHub release и появление:
+   - `app.asar`
+   - `app.asar.unpacked.zip`
+   - позднее `app.asar.gz`
+   - позднее `app.asar.zst`
+   - позднее `appDevTools.asar`
+
+## Что можно считать нормой по истории коммитов
+
+Судя по git-истории, у проекта были устойчивые паттерны:
+
+- обычные изменения: `feat: ...`, `fix: ...`
+- подготовка релиза: `chore: Prepare to release`
+- синхронизация под новую Яндекс Музыку: `chore: Spoof version from X to Y`
+
+Если хочется придерживаться сложившегося стиля, для release-подготовки лучше использовать эти же формулировки.
+
+## Что проверять перед крупными правками
+
+- не поломается ли `build -d` на текущей платформе;
+- не поменялся ли формат extracted `index.js`, который патчит `patchExtractedBuild`;
+- не требует ли новая версия клиента переноса regex-патчей devpanel;
+- не сломался ли update flow из-за новых имён release assets;
+- не нужно ли перезапустить `ffmpeg.yml` при изменениях вокруг FFmpeg.
+
+## Чего здесь сейчас нет
+
+- полноценного CI для сборки основного релизного `app.asar`;
+- нормального test-suite для всего репозитория;
+- актуального `builder.config.cjs`;
+- отделённых "исходников" Яндекс Музыки до стадии compiled bundle.
+
+Практически вся валидация здесь — это сборка, ручной smoke test и проверка release assets.

@@ -1802,25 +1802,24 @@
                                         marginTop: '20px',
                                     },
                                     children: [
-                                        (0, n.jsx)('span', { children: 'Слияние YMMC и PulseSync!', style: { fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: 'white', alignSelf: 'center' } }),
-                                        (0, n.jsx)('span', { children: 'После около одного года параллельной разработки я решил объединить два проекта в один. Что это меняет?', style: { marginBottom: '10px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: 'Я присоединяюсь к команде PulseSync.', style: { marginBottom: '5px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: 'Поддержка YMMC с этого момента прекращается.', style: { marginBottom: '5px', color: 'white' }}),
-                                        (0, n.jsx)('span', { children: 'Все возможности YMMC уже доступны в PulseSync. И не только!', style: { color: 'white' }}),
-                                        (0, n.jsx)('span', { children: 'Например в PulseSync реализована система аддонов. Которая позволяет расширять функционал стандартного мод клиента.', style: { marginBottom: '10px' }}),
-                                        (0, n.jsx)('span', { children: ['Подробности слияния можно прочитать тут: ', (0, n.jsx)('a', { children: 'https://pulsesync.dev/news/merging-with-ymmc', href: 'https://pulsesync.dev/news/merging-with-ymmc', target:"_blank", rel:"noreferrer noopener", className: 'buOTZq_TKQOVyjMLrXvB MergeNoteModal_link' })], style: { marginBottom: '10px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: 'У проекта появился новый репозиторий!', style: { fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: 'white', alignSelf: 'center' } }),
+                                        (0, n.jsx)('span', { children: 'Разработка ModYandexClient продолжается, и обновления будут выходить регулярно.', style: { marginBottom: '10px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: 'Если вы не хотите ставить дополнительный софт, можете продолжать пользоваться клиентом как раньше.', style: { marginBottom: '5px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: 'Для полностью автоматического обновления при запуске можно использовать Launcher.', style: { marginBottom: '5px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: ['Launcher: ', (0, n.jsx)('a', { children: 'https://github.com/mindst0rm/yamusic-launcher', href: 'https://github.com/mindst0rm/yamusic-launcher', target:"_blank", rel:"noreferrer noopener", className: 'buOTZq_TKQOVyjMLrXvB MergeNoteModal_link' })], style: { marginBottom: '10px', color: 'white' }}),
+                                        (0, n.jsx)('span', { children: ['Репозиторий проекта: ', (0, n.jsx)('a', { children: 'https://github.com/mindst0rm/ModYandexClient', href: 'https://github.com/mindst0rm/ModYandexClient', target:"_blank", rel:"noreferrer noopener", className: 'buOTZq_TKQOVyjMLrXvB MergeNoteModal_link' })], style: { marginBottom: '10px', color: 'white' }}),
                                         (0, n.jsx)('span', { children: 'Вы можете:', style: { fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: 'white', alignSelf: 'center' }}),
-                                        (0, n.jsx)('span', { children: 'Перейти на PulseSync автоматически', style: { fontWeight: 'bold', fontSize: '18px', color: 'white', alignSelf: 'center' }}),
+                                        (0, n.jsx)('span', { children: 'Открыть новый репозиторий', style: { fontWeight: 'bold', fontSize: '18px', color: 'white', alignSelf: 'center' }}),
                                         (0, n.jsx)('span', { children: 'или', style: { alignSelf: 'center' }}),
-                                        (0, n.jsx)('span', { children: 'Отключить все обновления в YMMC', style: { fontWeight: 'bold', fontSize: '18px', color: 'white', alignSelf: 'center' }}),
-                                        (0, n.jsx)('span', { children: 'И продолжить использовать его пока инфраструктура ЯМ сильно не изменится.', style: { marginBottom: '20px' }}),
+                                        (0, n.jsx)('span', { children: 'Закрыть это сообщение', style: { fontWeight: 'bold', fontSize: '18px', color: 'white', alignSelf: 'center' }}),
+                                        (0, n.jsx)('span', { children: 'Launcher можно установить позже, если захотите полностью автоматические обновления.', style: { marginBottom: '20px' }}),
                                         (0, n.jsx)('div', {
                                             style: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
                                             children: [
                                                 (0, n.jsx)('button', {
                                                     className: 'cpeagBA1_PblpJn8Xgtv iJVAJMgccD4vj4E4o068 zIMibMuH7wcqUoW7KH1B IlG7b1K0AD7E7AMx6F5p nHWc2sto1C6Gm0Dpw_l0 Y2uqxoU7xa_AZ8FUCVOW qU2apWBO1yyEK0lZ3lPO EditContentModal_button__usS1Z',
                                                     children: [
-                                                        (0, n.jsx)('span', { children: 'Остаться на YMMC',
+                                                        (0, n.jsx)('span', { children: 'Продолжить без перехода',
                                                             style: {
                                                                 alignSelf: 'center'
                                                             }
@@ -1835,7 +1834,7 @@
                                                 (0, n.jsx)('button', {
                                                     className: 'migrationPrimaryButton cpeagBA1_PblpJn8Xgtv _eTRQi5ADZCUvUKMZqJU zIMibMuH7wcqUoW7KH1B IlG7b1K0AD7E7AMx6F5p rWukOKAJh5Ga7JuIp62L Y2uqxoU7xa_AZ8FUCVOW qU2apWBO1yyEK0lZ3lPO EditContentModal_button__usS1Z',
                                                     children: [
-                                                        (0, n.jsx)('span', { children: 'Перейти на PulseSync',
+                                                        (0, n.jsx)('span', { children: 'Открыть GitHub',
                                                             style: {
                                                                 alignSelf: 'center'
                                                             }

@@ -124,25 +124,12 @@ const handleApplicationEvents = (window) => {
         store_js_1.setProjectMergeDecision(decision);
 
         if (decision === 'migrate') {
-
-            store_js_1.initNew(true);
-
-            sendBasicToastCreate(window, `migrationProcess`, 'Миграция на PulseSync', false);
-            let callback = (progressRenderer, progressWindow) => {
-                sendProgressBarChange(window, 'migrationProcess', progressRenderer * 100);
-                window.setProgressBar(progressWindow);
-            };
-            const modUpdater = (0, modUpdater_js_1.getModUpdater)();
-            await modUpdater.migrateToPulseSync(throttle(callback, PROGRESS_BAR_THROTTLE_MS));
-            setTimeout(() => modUpdater.onInstallUpdate(), 3000);
+            sendBasicToastCreate(window, `repoOpened`, 'Открываю новый репозиторий проекта', false);
+            await electron_1.shell.openExternal('https://github.com/mindst0rm/ModYandexClient');
+            setTimeout(() => sendBasicToastDismiss(window, `repoOpened`), 5000);
         } else if (decision === 'stay') {
-
-            store_js_1.set('modFeatures.appAutoUpdates.enableAppAutoUpdate', false);
-            store_js_1.set('modFeatures.appAutoUpdates.enableAppAutoUpdateByProbability', false);
-            store_js_1.set('modFeatures.appAutoUpdates.enableModAutoUpdate', false);
-
-            sendBasicToastCreate(window, `updatesDisabled`, 'Обновления отключены. Если передумаете, можете нажать на ! справа', false);
-            setTimeout(() => sendBasicToastDismiss(window, `updatesDisabled`), 5000);
+            sendBasicToastCreate(window, `repoNoticeDismissed`, 'Уведомление скрыто. Обновления будут выходить регулярно.', false);
+            setTimeout(() => sendBasicToastDismiss(window, `repoNoticeDismissed`), 5000);
         }
     });
 

@@ -20,7 +20,7 @@ const zstdDecompressPromise = zlib.zstdDecompress ? promisify(zlib.zstdDecompres
 
 exports.getModUpdater = exports.ModUpdater = void 0;
 
-const UPDATE_CHECK_URL = `https://api.github.com/repos/TheKing-OfTime/YandexMusicModClient/releases/latest`;
+const UPDATE_CHECK_URL = `https://api.github.com/repos/mindst0rm/ModYandexClient/releases/latest`;
 const APP_ASAR_PATH = electron.app.getAppPath();
 const APP_ASAR_TMP_DOWNLOAD_PATH = path.join(
   electron.app.getAppPath(),
@@ -277,23 +277,6 @@ class ModUpdater {
 
   onUpdateAvailable(listener) {
     this.onModUpdateListeners.push(listener);
-  }
-
-  async migrateToPulseSync(callback) {
-    this.logger.log("Downloading PulseSync migration patch...");
-
-    if (!fs.existsSync(TMP_PATH)) {
-      await fsPromise.mkdir(TMP_PATH);
-      this.logger.log("Created temp directory.");
-    }
-
-    const response = await fetch('https://ru-node-1.pulsesync.dev/api/v1/mod/latest');
-    const releaseData = await response.json();
-
-    this.isCompressed = true;
-    this.compressionType = "zstd";
-
-    await this.downloadFile(releaseData.url, APP_ASAR_TMP_ZSTD_DOWNLOAD_PATH, callback);
   }
 
   async onUpdateDownload(callback) {

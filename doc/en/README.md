@@ -1,20 +1,21 @@
 # YandexMusicModClient
 
 > [!CAUTION]
-> ### The project has been archived in favor of merging with [PulseSync](https://pulsesync.dev).
-> Although the repository will remain available, it will no longer be maintained or updated. It is recommended to switch to PulseSync for new features and improvements.
+> ### This repository is the active continuation of ModYandexClient development.
+> Updates for the mod client are released here regularly, without requiring users to install extra software.
+> If you want fully automatic fast updates on startup, you can use [yamusic-launcher](https://github.com/mindst0rm/yamusic-launcher).
 
-[![TotalDownloads](https://img.shields.io/github/downloads/TheKing-OfTime/YandexMusicModClient/total?label=Downloads)](https://github.com/TheKing-OfTime/YandexMusicModClient/releases "Download") [![OS - Windows](https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white)](https://github.com/TheKing-OfTime/YandexMusicModClient/releases "Download")
+[![TotalDownloads](https://img.shields.io/github/downloads/mindst0rm/ModYandexClient/total?label=Downloads)](https://github.com/mindst0rm/ModYandexClient/releases "Download") [![OS - Windows](https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white)](https://github.com/mindst0rm/ModYandexClient/releases "Download")
 
 <p align="left">
 	<a href="https://discord.gg/HGNKDxwHEH">
       <img height="35.48" alt="Сервер" src="https://github.com/user-attachments/assets/b7c8a272-b48c-411f-aca3-6512086a9a18">
    </a>
-   <a href="https://github.com/TheKing-OfTime/YandexMusicModClient/">
-      <img width="96" alt="Русский" src="https://github.com/TheKing-OfTime/YandexMusicModClient/blob/master/assets/Ru_Badge.png">
+   <a href="https://github.com/mindst0rm/ModYandexClient/">
+      <img width="96" alt="Русский" src="https://github.com/mindst0rm/ModYandexClient/blob/master/assets/Ru_Badge.png">
    </a>
-   <a href="https://github.com/TheKing-OfTime/YandexMusicModClient/blob/master/doc/en/README.md">
-      <img width="96" alt="English" src="https://github.com/TheKing-OfTime/YandexMusicModClient/blob/master/assets/En_Badge_Highlighted.png">
+   <a href="https://github.com/mindst0rm/ModYandexClient/blob/master/doc/en/README.md">
+      <img width="96" alt="English" src="https://github.com/mindst0rm/ModYandexClient/blob/master/assets/En_Badge_Highlighted.png">
    </a>
 </p>
 

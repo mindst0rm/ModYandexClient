@@ -55,14 +55,14 @@ const EXTRACTED_ENTITLEMENTS_PATH = path.join(TEMP_DIR, "extracted_entitlements.
 const PATCH_NOTES_PATH = path.join(process.argv[1], "../PATCHNOTES.md");
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const gitOwner = 'TheKing-OfTime';
-const gitRepo = 'YandexMusicModClient';
+const gitOwner = 'mindst0rm';
+const gitRepo = 'ModYandexClient';
 
 const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
 const patchNoteStringMD = fs.readFileSync(PATCH_NOTES_PATH, { encoding: "utf8"});
 
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
+const octokit = new Octokit(GITHUB_TOKEN ? { auth: GITHUB_TOKEN } : {});
 
 let oldYMHash;
 let oldYMHashOverride;
@@ -83,7 +83,7 @@ class PatchNote {
     }
 
     toGitHub(){
-        return `## Патч для Яндекс Музыки ${this.ymVersion}\n\n${this.patchNoteString}\n\n![GitHub Downloads (all assets, specific tag)](https://img.shields.io/github/downloads/TheKing-OfTime/YandexMusicModClient/onlyDiscordRPC%40${this.version}/total?label=Downloads)`
+        return `## Патч для Яндекс Музыки ${this.ymVersion}\n\n${this.patchNoteString}\n\n![GitHub Downloads (all assets, specific tag)](https://img.shields.io/github/downloads/mindst0rm/ModYandexClient/onlyDiscordRPC%40${this.version}/total?label=Downloads)`
     }
 }
     /**
@@ -112,6 +112,11 @@ class PatchNote {
  * @return {Promise<void>}
  */
 async function sendPatchNoteToDiscord(patchNote) {
+    if (!webhookUrl) {
+        console.warn('DISCORD_WEBHOOK_URL не задан, отправка патчноута в Discord пропущена');
+        return;
+    }
+
     const webhookResponse = await fetch(webhookUrl, {
         method: "POST",
         headers: {
@@ -126,6 +131,11 @@ async function sendPatchNoteToDiscord(patchNote) {
         throw new Error(`Не удалось отправить webhook: ${webhookResponse.statusText}`);
     }
     console.log('Патчноут отправлен в Discord')
+}
+
+function ensureGitHubToken() {
+    if (GITHUB_TOKEN) return;
+    throw new Error('GITHUB_TOKEN не задан. Установите переменную окружения или добавьте её в .env перед выполнением release/spoof команд.');
 }
 
 async function getLatestExtractedSrcDir(toPatched = false) {
@@ -191,6 +201,7 @@ async function modifyPackage({src = SRC_PATH,  version=undefined, buildInfo=unde
 
 
 async function getLatestRelease() {
+    ensureGitHubToken();
     const response = await octokit.rest.repos.getLatestRelease({
         owner: gitOwner,
         repo: gitRepo,
@@ -202,6 +213,7 @@ async function getLatestRelease() {
 }
 
 async function createAndPushSpoofCommit(oldVersion=undefined, newVersion=undefined) {
+    ensureGitHubToken();
     const currentCommit = await octokit.repos.getCommit({
         owner: gitOwner,
         repo: gitRepo,
@@ -358,6 +370,7 @@ async function uploadFolderAsAssetWithRetry(octokit, gitOwner, gitRepo, releaseI
  * @return {Promise<void>}
  */
 async function createGitHubRelease(version, asarPath, patchNote) {
+    ensureGitHubToken();
     const tagCreateResponse = await octokit.git.createRef({
         owner: gitOwner,
         repo: gitRepo,
@@ -923,7 +936,7 @@ async function bypassAsarIntegrity(dest=undefined) {
 }
 
 
-// Copied from https://github.com/PulseSync-LLC/PulseSync-client/blob/dev/src/main/utils/appUtils.ts
+// Reused and adapted from a previous client utility implementation
 async function getYandexMusicProcesses() {
     if (process.platform === "darwin") {
         try {
