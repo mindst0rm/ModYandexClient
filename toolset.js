@@ -53,6 +53,10 @@ if(!fs.existsSync(TEMP_DIR)) {
 const EXTRACTED_ENTITLEMENTS_PATH = path.join(TEMP_DIR, "extracted_entitlements.xml");
 
 const PATCH_NOTES_PATH = path.join(process.argv[1], "../PATCHNOTES.md");
+const LATEST_YML_URLS = [
+    'https://music-desktop-application.s3.yandex.net/stable/latest.yml',
+    'https://desktop.app.music.yandex.net/stable/latest.yml',
+];
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const gitOwner = 'mindst0rm';
@@ -186,7 +190,93 @@ function getModVersion() {
     .version;
 }
 
-async function modifyPackage({src = SRC_PATH,  version=undefined, buildInfo=undefined, modVersion=undefined, appConfig=undefined }) {
+function cleanYamlScalar(value = '') {
+    return value.trim().replace(/^['"]|['"]$/g, '');
+}
+
+function parseLatestYml(text) {
+    const versionMatch = text.match(/^\s*version:\s*([^\r\n]+)\s*$/m);
+    const releaseDateMatch = text.match(/^\s*releaseDate:\s*([^\r\n]+)\s*$/m);
+    const commonConfigMatch = text.match(/^\s*commonConfig:\s*$([\s\S]*)/m);
+
+    const commonConfig = {};
+    if (commonConfigMatch?.[1]) {
+        const lines = commonConfigMatch[1].split(/\r?\n/);
+        for (const line of lines) {
+            // Stop when indentation ends (next top-level YAML key)
+            if (/^\S/.test(line)) break;
+            const kv = line.match(/^\s+([A-Za-z0-9_]+):\s*(.+)\s*$/);
+            if (kv) {
+                commonConfig[kv[1]] = cleanYamlScalar(kv[2]);
+            }
+        }
+    }
+
+    const version = versionMatch ? cleanYamlScalar(versionMatch[1]) : undefined;
+    const releaseDate = releaseDateMatch ? cleanYamlScalar(releaseDateMatch[1]) : undefined;
+
+    if (!version) {
+        throw new Error('Не удалось распарсить version из latest.yml');
+    }
+
+    return { version, releaseDate, commonConfig };
+}
+
+async function fetchLatestYmlInfo() {
+    const errors = [];
+
+    for (const url of LATEST_YML_URLS) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: { 'User-Agent': 'ModYandexClient/toolset' },
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const text = await response.text();
+            const parsed = parseLatestYml(text);
+            return { ...parsed, sourceUrl: url };
+        } catch (error) {
+            errors.push(`${url} -> ${error.message}`);
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    throw new Error(`Не удалось получить latest.yml: ${errors.join(' | ')}`);
+}
+
+async function getLatestYMVersionForSpoof() {
+    try {
+        const latestYmlInfo = await fetchLatestYmlInfo();
+        const srcInfo = await getLatestYMVersion('src');
+        return {
+            version: latestYmlInfo.version,
+            buildInfo: {
+                ...(srcInfo?.buildInfo ?? {}),
+                VERSION: latestYmlInfo.version,
+                BRANCH: srcInfo?.buildInfo?.BRANCH ?? 'c3903938d4df76688c4639330c6834cd5ea664f2',
+                BUILD_TIME: latestYmlInfo.releaseDate ?? srcInfo?.buildInfo?.BUILD_TIME ?? new Date().toISOString(),
+            },
+            modification: {
+                ...(srcInfo?.modification ?? {}),
+                realYMVersion: latestYmlInfo.version,
+            },
+            commonConfig: latestYmlInfo.commonConfig,
+            source: `latest.yml (${latestYmlInfo.sourceUrl})`,
+        };
+    } catch (latestYmlError) {
+        console.warn('Не удалось получить версию из latest.yml, fallback на ./extracted/:', latestYmlError.message);
+        const extractedInfo = await getLatestYMVersion('extracted');
+        return {
+            ...extractedInfo,
+            source: 'extracted',
+        };
+    }
+}
+
+async function modifyPackage({src = SRC_PATH,  version=undefined, buildInfo=undefined, modVersion=undefined, appConfig=undefined, realYMVersion=undefined, common=undefined }) {
     let packageJson = JSON.parse(await fsp.readFile(path.join(src, '/package.json'), 'utf8'));
     const oldVersion = packageJson.version;
 
@@ -194,6 +284,8 @@ async function modifyPackage({src = SRC_PATH,  version=undefined, buildInfo=unde
     if (buildInfo || version) packageJson.buildInfo = buildInfo ?? { "VERSION": version, "BRANCH": "c3903938d4df76688c4639330c6834cd5ea664f2", "BUILD_TIME": "2025-11-13T15:37:20Z"}; // TODO: Поразмыслить как сделать по нормальному для сборки мейна через Роллап
     if (modVersion) packageJson.modification.version = modVersion;
     if (appConfig) packageJson.appConfig = {...packageJson.appConfig, ...appConfig};
+    if (realYMVersion || version) packageJson.modification.realYMVersion = realYMVersion ?? version;
+    if (common) packageJson.common = { ...packageJson.common, ...common };
 
     await fsp.writeFile(path.join(src, '/package.json'), JSON.stringify(packageJson, null, 2), 'utf8');
     return { oldVersion: oldVersion, newVersion: version }
@@ -685,17 +777,25 @@ async function buildDirectly(src, noMinify=false, noNativeModules=false, forceOp
     };
 }
 
-async function spoof(type='extracted', shouldRelease=false) {
+async function spoof(type='auto', shouldRelease=false) {
     console.log('Спуфинг...');
     console.time('Спуфинг завершён');
     let latestRelease, modVersion;
-    const versions = await getLatestYMVersion(type);
+    const versions = type === 'auto'
+      ? await getLatestYMVersionForSpoof()
+      : await getLatestYMVersion(type);
     if (shouldRelease) {
       latestRelease = await getLatestRelease();
       modVersion = (await getLatestYMVersion('src')).modification.version;
     }
     console.log('Последняя версия ЯМ', versions);
-    const result = await modifyPackage({ version: versions.version, buildInfo: versions.buildInfo });
+    console.log('Источник версии для spoof:', versions.source ?? type);
+    const result = await modifyPackage({
+        version: versions.version,
+        buildInfo: versions.buildInfo,
+        realYMVersion: versions.modification?.realYMVersion ?? versions.version,
+        common: versions.commonConfig,
+    });
 
     if(latestRelease) {
       if(semver.lte(modVersion, latestRelease.name)) {
@@ -712,11 +812,11 @@ async function spoof(type='extracted', shouldRelease=false) {
 }
 
 async function release(dest, versions=undefined) {
-    const version = await getModVersion();
-    const {version: ymVersion} = await getLatestYMVersion();
-    const patchNote = (versions ? PatchNote.forSpoofPatch(versions.newVersion, version, versions.oldVersion) : new PatchNote(ymVersion, version, patchNoteStringMD));
-    await createGitHubRelease(version, dest, patchNote);
-    await sendPatchNoteToDiscord(patchNote);
+  const version = await getModVersion();
+  const {version: ymVersion} = await getLatestYMVersion('src');
+  const patchNote = (versions ? PatchNote.forSpoofPatch(versions.newVersion, version, versions.oldVersion) : new PatchNote(ymVersion, version, patchNoteStringMD));
+  await createGitHubRelease(version, dest, patchNote);
+  await sendPatchNoteToDiscord(patchNote);
 }
 
 async function extractIfNotExist(version, force=false, src=undefined) {
@@ -1073,7 +1173,7 @@ async function run(command, flags) {
 			await build({srcPath: src, destDir: dest, noMinify: !shouldMinify, noNativeModules: noNativeModules });
 			break;
         case 'spoof':
-			const versions = await spoof('extracted', shouldRelease);
+			const versions = await spoof('auto', shouldRelease);
 			if ( shouldBuild || shouldRelease) await build({noNativeModules: noNativeModules })
 			if (shouldRelease) await release(dest, versions)
 			break;

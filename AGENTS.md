@@ -65,6 +65,11 @@ node toolset.js release
 - В релиз грузятся `app.asar` и `app.asar.unpacked.zip`.
 - После публикации GitHub Actions добавляют `app.asar.gz`, `app.asar.zst` и DevTools-only артефакты.
 
+## Правило по веткам и тегу релиза
+
+- Любые релизные изменения (включая `src/package.json`, `PATCHNOTES.md`, `toolset.js`) коммитить и пушить в обе ветки: сначала `dev`, затем `master`.
+- Релизный тег всегда держать в формате `onlyDiscordRPC@<modification.version>` и привязывать к актуальному release-коммиту (а не к предыдущему).
+
 ## Критичные caveats
 
 - В проекте жёстко зашит GitHub-репозиторий `mindst0rm/ModYandexClient`.
